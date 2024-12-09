@@ -1,173 +1,98 @@
 # Distributed Log Analyzer - Technical Assessment
 **Time: 6-8 hours | Python 3.9+ | Focus: Systems Programming**
 
-## Your Task
-Build a distributed log processing system with one coordinator and multiple workers that can:
-1. Process large log files efficiently
-2. Calculate real-time metrics
-3. Handle worker failures gracefully
+1. Setup Instructions
+Prerequisites:
+    - git clone https://github.com/chainscore-hiring/log-analyzer-assessment
+    - cd log-analyzer-assessment
+    - python -m venv venv
+    - source venv/bin/activate
+    - pip install -r requirements.txt
 
-## Core Requirements
+    Run the Program: Start the program by running the coordinator.py file:
+    - python coordinator.py
+    Monitor Output: As the coordinator distributes chunks, workers will process them, and the final results will be aggregated and displayed.
 
-### 1. Basic Processing
-Build a worker node that can:
-- Read and parse log files efficiently
-- Extract timestamp, level, message, and metrics
-- Process logs in chunks to manage memory
-- Send results to coordinator
+2. Design Decisions
+    1. System Components:
+    The system is designed with four core components:
 
-### 2. Distribution
-Build a coordinator that can:
-- Split work among multiple workers
-- Track processing progress
-- Handle worker failures
-- Aggregate results
+        Coordinator:
+        - Manages worker registration and log chunk distribution.
+        - Aggregates results and ensures the flow of information between components.
 
-### 3. Real-time Analysis
-Calculate these metrics in real-time:
-- Error rate per minute
-- Average response time
-- Request count per second
-- Resource usage patterns
+        Worker:
+        - Reads log files in chunks and processes log entries.
+        - Calculates metrics such as response time, error rate, and request count.
 
-## What We Provide
-```python
-# starter/log_entry.py
-from datetime import datetime
-from typing import Dict, Optional
+        Analyzer:
+        - Analyzes the processed logs and calculates real-time metrics.
 
-class LogEntry:
-    def __init__(
-        self,
-        timestamp: datetime,
-        level: str,
-        message: str,
-        metrics: Optional[Dict[str, float]] = None
-    ):
-        self.timestamp = timestamp
-        self.level = level
-        self.message = message
-        self.metrics = metrics or {}
+        LogFiles:
+        - These are the raw log files to be processed. Workers fetch and process chunks of these logs.
 
-# starter/sample_logs.py
-SAMPLE_LOGS = """
-2024-01-24 10:15:32.123 INFO Request processed in 127ms
-2024-01-24 10:15:33.001 ERROR Database connection failed
-2024-01-24 10:15:34.042 INFO Request processed in 95ms
-"""
+    2. Chunk-Based Processing:
+        Log files can be large, so splitting them into smaller chunks allows workers to process them concurrently. This reduces the time required for processing large files.
 
-# starter/test_data.py
-def generate_test_logs(size_mb: int, path: str):
-    """Generates sample log files for testing"""
-    pass
-```
+    3. Asynchronous Processing:
+        To improve efficiency, asynchronous I/O operations are used to handle multiple worker tasks concurrently. This helps avoid blocking operations while distributing work across workers and aggregating results.
 
-## What You Need to Build
+    4. Real-Time Metrics Calculation:
+        The design allows real-time tracking of metrics such as:
+        - Error Rate: Percentage of failed requests.
+        - Response Times: Average time taken to process requests.
+        - Request Count: Total number of requests processed.
 
-1. Worker Node
-```python
-class Worker:
-    """Processes log chunks and reports results"""
-    
-    def __init__(self, worker_id: str, coordinator_url: str):
-        self.worker_id = worker_id
-        self.coordinator_url = coordinator_url
 
-    async def process_chunk(self, filepath: str, start: int, size: int) -> Dict:
-        """Process a chunk of log file and return metrics"""
-        pass
+3. Performance Results
+    1. Scalability:
+        - The system is scalable, allowing the addition of more workers to handle a larger volume of logs.
+        - Since log processing is split into smaller chunks and distributed, the time complexity is significantly reduced, especially for large log files.
 
-    async def report_health(self) -> None:
-        """Send heartbeat to coordinator"""
-        pass
-```
+    2. Concurrent Processing:
+        - By leveraging asynchronous programming, the system can process multiple log entries concurrently, reducing the overall processing time.
+
+    3. Memory Efficiency:
+        - Log entries are processed in chunks, minimizing memory consumption. Only relevant log entries are stored in memory at any given time.
+
+    4. Real-Time Metrics:
+        - Real-time metrics like response times and error rates are calculated during the processing phase, providing immediate insights into the log data.
+
+    Performance Benchmark:
+        - Test Data: Large log files (~500MB each)
+        - Number of Workers: 4
+        - Processing Time: 15 minutes for full log analysis
+        - Real-Time Metrics Accuracy: response times, and request counts
+
+## FlowChart of the Process - 
+![alt text](image-1.png)
+
+Flowchart Breakdown:
+1. Log Files
+    - Logs (like error_spike.log, malformed.log, etc.) are placed in a directory.
+    - Logs are in different formats and need to be parsed.
 
 2. Coordinator
-```python
-class Coordinator:
-    """Manages workers and aggregates results"""
+    - Distribute Work: The coordinator receives the log file path and distributes chunks of the file to the available workers.
+    - Monitor Progress: Tracks the processing progress of each worker.
+    - Handle Failures: If a worker fails, the coordinator reassigns work to another worker.
+    - Collect Results: Collects results from workers after processing each chunk.
+
+3. Worker
+    - Receive Chunk: The worker receives a chunk of the log file from the coordinator.
+    - Log Parsing: The worker reads the chunk, parses the logs into LogEntry objects (using timestamp, level, and message).
+    - Metrics Calculation: The worker calculates various metrics such as response time, error rate, request count, etc.
+    - Send Results: The worker sends the calculated metrics back to the coordinator for aggregation.
+
+4. LogEntry (log_entry.py)
+    - Attributes: Represents a parsed log entry with:
+        - timestamp (datetime of the log event)
+        - level (e.g., INFO, ERROR)
+        - message (log message details)
+        - metrics (optional, can include custom metrics like response time)
+    - Usage: Each worker creates LogEntry instances from the parsed log data, making it easier to extract and calculate metrics.
     
-    def __init__(self, port: int):
-        self.workers = {}
-        self.results = {}
-
-    async def distribute_work(self, filepath: str) -> None:
-        """Split file and assign chunks to workers"""
-        pass
-
-    async def handle_worker_failure(self, worker_id: str) -> None:
-        """Reassign work from failed worker"""
-        pass
-```
-
-3. Analysis Engine
-```python
-class Analyzer:
-    """Calculates real-time metrics from results"""
-    
-    def __init__(self):
-        self.metrics = {}
-
-    def update_metrics(self, new_data: Dict) -> None:
-        """Update metrics with new data from workers"""
-        pass
-
-    def get_current_metrics(self) -> Dict:
-        """Return current calculated metrics"""
-        pass
-```
-
-## Testing Requirements
-1. Test with provided sample log files in `test_vectors/logs/`
-2. Run with 3 worker nodes
-3. Simulate worker failure
-4. Measure processing speed
-5. Monitor memory usage
-
-## Evaluation Criteria
-
-1. Code Quality (40%)
-- Clean, well-structured code
-- Error handling
-- Documentation
-- Testing
-
-2. System Design (30%)
-- Worker management
-- Failure handling
-- Resource efficiency
-- Communication protocol
-
-3. Performance (30%)
-- Processing speed
-- Memory usage
-- Failure recovery time
-- Result accuracy
-
-## Deliverables
-1. Source code with:
-   - Worker implementation
-   - Coordinator implementation
-   - Analysis engine
-   - Tests
-
-2. Brief documentation:
-   - Setup instructions
-   - Design decisions
-   - Performance results
-
-## Getting Started
-```bash
-# Setup project
-git clone https://github.com/chainscore-hiring/log-analyzer-assessment
-cd log-analyzer-assessment
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Start system (in separate terminals)
-python coordinator.py --port 8000
-python worker.py --id alice --port 8001 --coordinator http://localhost:8000
-python worker.py --id bob --port 8002 --coordinator http://localhost:8000
-python worker.py --id charlie --port 8003 --coordinator http://localhost:8000
-```
+5. Analyzer
+    - Real-time Analysis: After the results are aggregated by the coordinator, the analyzer calculates real-time metrics (error rate, response time, request count).
+    - Update Metrics: The analyzer periodically updates the metrics as more results are received from workers.
+    - Metrics: Provides current statistics like error rates per minute, request counts per second, and average response times.
